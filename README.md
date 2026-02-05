@@ -34,11 +34,26 @@ docker run -d --name text2img-service -p 51234:51234 ghcr.io/r1ddle1337/riddlete
 
 ## Docker Compose 说明
 
-仓库内提供 `docker-compose.ghcr.yml`，默认从 GHCR 拉取镜像并启动。
-如需自定义模板，取消注释 volume 映射：
-`./templates:/app/templates`
-
+仓库内提供 `docker-compose.ghcr.yml`，默认从 GHCR 拉取镜像并启动。  
+如需自定义模板，取消注释 volume 映射：`./templates:/app/templates`  
 端口映射修改见 `docker-compose.ghcr.yml` 的 `ports`。
+
+## 服务器快速部署
+
+适合没有本地 Docker 的情况，直接在服务器上拉镜像运行。
+
+1. 服务器安装 Docker 和 Docker Compose 插件
+2. 下载 `docker-compose.ghcr.yml` 并启动
+```bash
+mkdir -p /opt/text2img-service
+cd /opt/text2img-service
+curl -fsSL https://raw.githubusercontent.com/R1ddle1337/text2img-service/main/docker-compose.ghcr.yml -o docker-compose.ghcr.yml
+docker compose -f docker-compose.ghcr.yml up -d
+```
+3. 验证服务
+```bash
+curl http://localhost:51234/health
+```
 
 ## API
 
@@ -96,11 +111,35 @@ curl -X POST http://localhost:51234/render \
   --output news.png
 ```
 
+### 最小可用请求
+
+```bash
+curl -X POST http://localhost:51234/api/universal \
+  -H "Content-Type: application/json" \
+  -d '{"title":"Hello","content":"Just a test."}' \
+  --output out.png
+```
+
 ## 环境变量
 
 | 变量 | 默认值 | 说明 |
 | --- | --- | --- |
 | `PORT` | `51234` | 服务端口 |
+
+### 最小化配置示例
+
+`.env`：
+```bash
+PORT=51234
+```
+
+如果你修改了 `PORT`，需要同步调整容器端口映射，例如：
+```yaml
+ports:
+  - "3000:3000"
+environment:
+  - PORT=3000
+```
 
 ## 发布到 GHCR（GitHub Actions）
 
@@ -108,10 +147,10 @@ curl -X POST http://localhost:51234/render \
 
 1. 推送代码到 GitHub
 2. 打 tag 并推送（示例）
-   ```bash
-   git tag v1.0.0
-   git push origin v1.0.0
-   ```
+```bash
+git tag v1.0.0
+git push origin v1.0.0
+```
 3. 在 GitHub Actions 中查看 `Publish to GHCR` 是否成功
 4. 第一次发布后，在 GitHub Packages 将镜像可见性设置为 `Public`
 
