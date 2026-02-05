@@ -1,0 +1,248 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            background: transparent;
+            font-family: 'Microsoft YaHei', 'PingFang SC', sans-serif;
+        }
+
+        .board-container {
+            position: relative;
+            margin: 0 auto;
+        }
+
+        .piece {
+            position: absolute;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 50%;
+            font-weight: bold;
+            cursor: default;
+            box-sizing: border-box;
+            transform: translate(-50%, -50%);
+        }
+
+        .piece-red {
+            background: radial-gradient(circle at 35% 35%, #fff5f5, #f5e6d0);
+            border: 2px solid #8B0000;
+            color: #CC0000;
+            box-shadow: 1px 2px 4px rgba(0,0,0,0.3);
+        }
+
+        .piece-black {
+            background: radial-gradient(circle at 35% 35%, #f0f0f0, #e0d5c5);
+            border: 2px solid #1a1a1a;
+            color: #1a1a1a;
+            box-shadow: 1px 2px 4px rgba(0,0,0,0.3);
+        }
+
+        .highlight-from {
+            box-shadow: 0 0 0 3px rgba(255, 165, 0, 0.7), 1px 2px 4px rgba(0,0,0,0.3);
+        }
+
+        .highlight-to {
+            box-shadow: 0 0 0 3px rgba(255, 0, 0, 0.7), 1px 2px 4px rgba(0,0,0,0.3);
+        }
+    </style>
+</head>
+<body>
+    <div class="bg-gradient-to-b from-amber-50 to-orange-50 rounded-xl shadow-lg overflow-hidden" style="width: 500px;">
+        <!-- 标题栏 -->
+        <div class="bg-gradient-to-r from-red-800 to-red-900 px-4 py-3">
+            <div class="flex items-center justify-between">
+                <div class="flex items-center gap-2">
+                    <span style="font-size: 20px;">♟️</span>
+                    <span class="text-white font-bold text-lg">中国象棋</span>
+                </div>
+                <span class="text-red-200 text-sm"><%= subtitle || '' %></span>
+            </div>
+        </div>
+
+        <!-- 状态栏 -->
+        <div class="px-4 py-2 flex justify-between items-center text-sm" style="background: rgba(139,0,0,0.08);">
+            <div class="flex items-center gap-1">
+                <span style="color: #CC0000;">🔴</span>
+                <span class="font-bold" style="color: #CC0000;"><%= red_player_name %></span>
+            </div>
+            <div>
+                <% if (is_finished) { %>
+                    <% if (winner === 'R') { %>
+                        <span class="text-red-700 font-bold">🏆 红方胜</span>
+                    <% } else if (winner === 'B') { %>
+                        <span class="font-bold" style="color: #333;">🏆 黑方胜</span>
+                    <% } else { %>
+                        <span class="text-gray-600 font-bold">🤝 和棋</span>
+                    <% } %>
+                <% } else if (!black_player_name) { %>
+                    <span class="text-gray-500">等待对手加入...</span>
+                <% } else { %>
+                    <span class="<%= current_turn === 'R' ? 'text-red-700' : 'text-gray-800' %> font-bold">
+                        <%= current_turn === 'R' ? '红方' : '黑方' %>走棋
+                        <% if (in_check) { %><span class="text-red-600">⚠️将军</span><% } %>
+                    </span>
+                <% } %>
+            </div>
+            <div class="flex items-center gap-1">
+                <span>⚫</span>
+                <span class="font-bold" style="color: #333;"><%= black_player_name || '等待加入' %></span>
+            </div>
+        </div>
+
+        <!-- 棋盘 -->
+        <%
+            var gap = 44;
+            var padding = 45;
+            var boardWidth = gap * 8;
+            var boardHeight = gap * 9;
+            var totalWidth = boardWidth + padding * 2;
+            var totalHeight = boardHeight + padding * 2;
+            var pieceSize = 38;
+            var fontSize = 18;
+
+            // 棋子名称映射
+            var pieceNameMap = {
+                'RK': '帅', 'RA': '仕', 'RE': '相', 'RH': '马', 'RC': '车', 'RN': '炮', 'RS': '兵',
+                'BK': '将', 'BA': '士', 'BE': '象', 'BH': '馬', 'BC': '車', 'BN': '砲', 'BS': '卒'
+            };
+
+            var colLabels = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I'];
+        %>
+
+        <div class="flex justify-center py-3">
+            <div class="board-container" style="width: <%= totalWidth %>px; height: <%= totalHeight + 30 %>px;">
+                <svg width="<%= totalWidth %>" height="<%= totalHeight %>" style="position: absolute; top: 0; left: 0;">
+                    <!-- 棋盘背景 -->
+                    <rect x="0" y="0" width="<%= totalWidth %>" height="<%= totalHeight %>" fill="#DEB887" rx="4"/>
+                    <rect x="<%= padding - 2 %>" y="<%= padding - 2 %>" width="<%= boardWidth + 4 %>" height="<%= boardHeight + 4 %>" fill="none" stroke="#5D3A1A" stroke-width="3"/>
+
+                    <!-- 横线 -->
+                    <% for (var r = 0; r < 10; r++) { %>
+                        <line x1="<%= padding %>" y1="<%= padding + r * gap %>"
+                              x2="<%= padding + boardWidth %>" y2="<%= padding + r * gap %>"
+                              stroke="#5D3A1A" stroke-width="1"/>
+                    <% } %>
+
+                    <!-- 竖线（上半部分，row 0-4 映射为棋盘上方黑方） -->
+                    <% for (var c = 0; c < 9; c++) { %>
+                        <% if (c === 0 || c === 8) { %>
+                            <!-- 边线：整条 -->
+                            <line x1="<%= padding + c * gap %>" y1="<%= padding %>"
+                                  x2="<%= padding + c * gap %>" y2="<%= padding + boardHeight %>"
+                                  stroke="#5D3A1A" stroke-width="1"/>
+                        <% } else { %>
+                            <!-- 内线：上半 -->
+                            <line x1="<%= padding + c * gap %>" y1="<%= padding %>"
+                                  x2="<%= padding + c * gap %>" y2="<%= padding + 4 * gap %>"
+                                  stroke="#5D3A1A" stroke-width="1"/>
+                            <!-- 内线：下半 -->
+                            <line x1="<%= padding + c * gap %>" y1="<%= padding + 5 * gap %>"
+                                  x2="<%= padding + c * gap %>" y2="<%= padding + 9 * gap %>"
+                                  stroke="#5D3A1A" stroke-width="1"/>
+                        <% } %>
+                    <% } %>
+
+                    <!-- 九宫格斜线（黑方，棋盘上方 row 9-7 → SVG row 0-2） -->
+                    <line x1="<%= padding + 3 * gap %>" y1="<%= padding %>"
+                          x2="<%= padding + 5 * gap %>" y2="<%= padding + 2 * gap %>"
+                          stroke="#5D3A1A" stroke-width="1"/>
+                    <line x1="<%= padding + 5 * gap %>" y1="<%= padding %>"
+                          x2="<%= padding + 3 * gap %>" y2="<%= padding + 2 * gap %>"
+                          stroke="#5D3A1A" stroke-width="1"/>
+
+                    <!-- 九宫格斜线（红方，棋盘下方 row 0-2 → SVG row 7-9） -->
+                    <line x1="<%= padding + 3 * gap %>" y1="<%= padding + 7 * gap %>"
+                          x2="<%= padding + 5 * gap %>" y2="<%= padding + 9 * gap %>"
+                          stroke="#5D3A1A" stroke-width="1"/>
+                    <line x1="<%= padding + 5 * gap %>" y1="<%= padding + 7 * gap %>"
+                          x2="<%= padding + 3 * gap %>" y2="<%= padding + 9 * gap %>"
+                          stroke="#5D3A1A" stroke-width="1"/>
+
+                    <!-- 楚河汉界文字 -->
+                    <text x="<%= padding + boardWidth / 2 %>" y="<%= padding + 4.55 * gap %>"
+                          text-anchor="middle" font-size="20" fill="#5D3A1A" font-weight="bold"
+                          font-family="KaiTi, STKaiti, serif" letter-spacing="16">楚河　漢界</text>
+
+                    <!-- 列标签（上方） -->
+                    <% for (var c = 0; c < 9; c++) { %>
+                        <text x="<%= padding + c * gap %>" y="<%= 14 %>"
+                              text-anchor="middle" font-size="11" fill="#5D3A1A">
+                            <%= colLabels[c] %>
+                        </text>
+                    <% } %>
+
+                    <!-- 列标签（下方） -->
+                    <% for (var c = 0; c < 9; c++) { %>
+                        <text x="<%= padding + c * gap %>" y="<%= totalHeight - 8 %>"
+                              text-anchor="middle" font-size="11" fill="#5D3A1A">
+                            <%= colLabels[c] %>
+                        </text>
+                    <% } %>
+
+                    <!-- 行标签（左侧，从上到下 10-1） -->
+                    <% for (var r = 0; r < 10; r++) { %>
+                        <text x="<%= padding - 25 %>" y="<%= padding + r * gap + 4 %>"
+                              text-anchor="end" font-size="11" fill="#5D3A1A">
+                            <%= 10 - r %>
+                        </text>
+                    <% } %>
+
+                    <!-- 行标签（右侧，从上到下 10-1） -->
+                    <% for (var r = 0; r < 10; r++) { %>
+                        <text x="<%= padding + boardWidth + 25 %>" y="<%= padding + r * gap + 4 %>"
+                              text-anchor="start" font-size="11" fill="#5D3A1A">
+                            <%= 10 - r %>
+                        </text>
+                    <% } %>
+                </svg>
+
+                <!-- 棋子 -->
+                <%
+                    // board 数组：index = row * 9 + col，row 0 是红方底线
+                    // 渲染时：row 9 在最上面 (SVG y=0 位置)，row 0 在最下面
+                    for (var row = 0; row < 10; row++) {
+                        for (var col = 0; col < 9; col++) {
+                            var idx = row * 9 + col;
+                            var pieceCode = board[idx];
+                            if (!pieceCode) continue;
+
+                            var pieceName = pieceNameMap[pieceCode] || '?';
+                            var isRed = pieceCode.charAt(0) === 'R';
+
+                            // 渲染坐标：row 0 (红底线) → SVG 最下面 (9-0=9), row 9 (黑底线) → SVG 最上面 (9-9=0)
+                            var svgRow = 9 - row;
+                            var px = padding + col * gap;
+                            var py = padding + svgRow * gap;
+
+                            var highlightClass = '';
+                            if (last_move) {
+                                if (idx === last_move.to) highlightClass = 'highlight-to';
+                                else if (idx === last_move.from) highlightClass = 'highlight-from';
+                            }
+                %>
+                    <div class="piece <%= isRed ? 'piece-red' : 'piece-black' %> <%= highlightClass %>"
+                         style="left: <%= px %>px; top: <%= py %>px; width: <%= pieceSize %>px; height: <%= pieceSize %>px; font-size: <%= fontSize %>px;">
+                        <%= pieceName %>
+                    </div>
+                <%
+                        }
+                    }
+                %>
+            </div>
+        </div>
+
+        <!-- 底部信息 -->
+        <div class="px-4 py-2 text-xs text-center" style="color: #8B6914; background: rgba(139,0,0,0.05);">
+            第 <%= move_count %> 回合
+            <% if (last_move) { %>
+                · 上一步: <%= colLabels[last_move.from % 9] %><%= Math.floor(last_move.from / 9) + 1 %>-<%= colLabels[last_move.to % 9] %><%= Math.floor(last_move.to / 9) + 1 %>
+            <% } %>
+        </div>
+    </div>
+</body>
+</html>

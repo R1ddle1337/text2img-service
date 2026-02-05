@@ -1,0 +1,203 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            background: transparent;
+            font-family: 'Microsoft YaHei', 'PingFang SC', sans-serif;
+        }
+
+        .cell {
+            width: 52px;
+            height: 52px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+        }
+
+        .piece {
+            width: 44px;
+            height: 44px;
+            border-radius: 6px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 14px;
+            font-weight: bold;
+            box-shadow: 1px 2px 4px rgba(0,0,0,0.3);
+            cursor: default;
+        }
+
+        .piece-hidden {
+            background: linear-gradient(135deg, #4a5568, #2d3748);
+            border: 2px solid #1a202c;
+            color: #a0aec0;
+        }
+
+        .piece-red {
+            background: linear-gradient(135deg, #fc8181, #e53e3e);
+            border: 2px solid #c53030;
+            color: #fff;
+        }
+
+        .piece-blue {
+            background: linear-gradient(135deg, #63b3ed, #3182ce);
+            border: 2px solid #2b6cb0;
+            color: #fff;
+        }
+
+        .highlight {
+            box-shadow: 0 0 0 3px rgba(255, 215, 0, 0.8), 1px 2px 4px rgba(0,0,0,0.3);
+        }
+
+        .grid-line {
+            stroke: rgba(0,0,0,0.2);
+            stroke-width: 1;
+        }
+    </style>
+</head>
+<body>
+    <%
+        var cols = 6;
+        var rows = 10;
+        var cellSize = 52;
+        var padding = 40;
+        var boardWidth = cols * cellSize;
+        var boardHeight = rows * cellSize;
+        var totalWidth = boardWidth + padding * 2;
+        var totalHeight = boardHeight + padding * 2;
+
+        var colLabels = ['A', 'B', 'C', 'D', 'E', 'F'];
+    %>
+
+    <div class="bg-gradient-to-b from-slate-100 to-slate-200 rounded-xl shadow-lg overflow-hidden" style="width: <%= totalWidth + 80 %>px;">
+        <!-- 标题栏 -->
+        <div class="bg-gradient-to-r from-slate-700 to-slate-800 px-4 py-3">
+            <div class="flex items-center justify-between">
+                <div class="flex items-center gap-2">
+                    <span style="font-size: 20px;">🎖️</span>
+                    <span class="text-white font-bold text-lg">军棋翻棋</span>
+                </div>
+                <span class="text-slate-300 text-sm"><%= subtitle || '' %></span>
+            </div>
+        </div>
+
+        <!-- 状态栏 -->
+        <div class="px-4 py-2 flex justify-between items-center text-sm bg-slate-50">
+            <div class="flex items-center gap-1">
+                <span class="text-red-500">🔴</span>
+                <span class="font-bold <%= player_a_side === 'RED' ? 'text-red-600' : (player_a_side === 'BLUE' ? 'text-blue-600' : 'text-gray-600') %>">
+                    <%= player_a_name %>
+                    <% if (player_a_side) { %>(<%= player_a_side === 'RED' ? '红' : '蓝' %>)<% } %>
+                </span>
+            </div>
+            <div>
+                <% if (is_finished) { %>
+                    <span class="text-green-600 font-bold">🏆 游戏结束</span>
+                <% } else if (!player_b_name) { %>
+                    <span class="text-gray-500">等待对手加入...</span>
+                <% } else { %>
+                    <span class="<%= current_turn === 1 ? 'text-orange-600' : 'text-cyan-600' %> font-bold">
+                        <%= current_turn === 1 ? player_a_name : player_b_name %> 行动
+                    </span>
+                <% } %>
+            </div>
+            <div class="flex items-center gap-1">
+                <span class="text-blue-500">🔵</span>
+                <span class="font-bold <%= player_b_side === 'RED' ? 'text-red-600' : (player_b_side === 'BLUE' ? 'text-blue-600' : 'text-gray-600') %>">
+                    <%= player_b_name || '等待加入' %>
+                    <% if (player_b_side) { %>(<%= player_b_side === 'RED' ? '红' : '蓝' %>)<% } %>
+                </span>
+            </div>
+        </div>
+
+        <!-- 棋盘 -->
+        <div class="flex justify-center py-3" style="background: linear-gradient(135deg, #68d391 0%, #48bb78 100%);">
+            <div style="position: relative; width: <%= totalWidth %>px; height: <%= totalHeight %>px;">
+                <!-- SVG 网格线 -->
+                <svg width="<%= totalWidth %>" height="<%= totalHeight %>" style="position: absolute; top: 0; left: 0;">
+                    <!-- 背景 -->
+                    <rect x="<%= padding %>" y="<%= padding %>" width="<%= boardWidth %>" height="<%= boardHeight %>" fill="rgba(255,255,255,0.3)" rx="4"/>
+
+                    <!-- 横线 -->
+                    <% for (var r = 0; r <= rows; r++) { %>
+                        <line x1="<%= padding %>" y1="<%= padding + r * cellSize %>"
+                              x2="<%= padding + boardWidth %>" y2="<%= padding + r * cellSize %>"
+                              class="grid-line"/>
+                    <% } %>
+
+                    <!-- 竖线 -->
+                    <% for (var c = 0; c <= cols; c++) { %>
+                        <line x1="<%= padding + c * cellSize %>" y1="<%= padding %>"
+                              x2="<%= padding + c * cellSize %>" y2="<%= padding + boardHeight %>"
+                              class="grid-line"/>
+                    <% } %>
+
+                    <!-- 列标签 -->
+                    <% for (var c = 0; c < cols; c++) { %>
+                        <text x="<%= padding + c * cellSize + cellSize / 2 %>" y="<%= padding - 15 %>"
+                              text-anchor="middle" font-size="12" fill="#2d3748" font-weight="bold">
+                            <%= colLabels[c] %>
+                        </text>
+                        <text x="<%= padding + c * cellSize + cellSize / 2 %>" y="<%= padding + boardHeight + 22 %>"
+                              text-anchor="middle" font-size="12" fill="#2d3748" font-weight="bold">
+                            <%= colLabels[c] %>
+                        </text>
+                    <% } %>
+
+                    <!-- 行标签 -->
+                    <% for (var r = 0; r < rows; r++) { %>
+                        <text x="<%= padding - 20 %>" y="<%= padding + r * cellSize + cellSize / 2 + 4 %>"
+                              text-anchor="middle" font-size="12" fill="#2d3748" font-weight="bold">
+                            <%= r + 1 %>
+                        </text>
+                        <text x="<%= padding + boardWidth + 20 %>" y="<%= padding + r * cellSize + cellSize / 2 + 4 %>"
+                              text-anchor="middle" font-size="12" fill="#2d3748" font-weight="bold">
+                            <%= r + 1 %>
+                        </text>
+                    <% } %>
+                </svg>
+
+                <!-- 棋子 -->
+                <% for (var pos = 0; pos < board.length; pos++) {
+                    var cell = board[pos];
+                    var col = pos % cols;
+                    var row = Math.floor(pos / cols);
+                    var x = padding + col * cellSize + (cellSize - 44) / 2;
+                    var y = padding + row * cellSize + (cellSize - 44) / 2;
+                    var isLastPos = (last_pos === pos);
+                %>
+                    <% if (cell.type === 'hidden') { %>
+                        <div class="piece piece-hidden <%= isLastPos ? 'highlight' : '' %>"
+                             style="position: absolute; left: <%= x %>px; top: <%= y %>px;">
+                            ?
+                        </div>
+                    <% } else if (cell.type === 'revealed') { %>
+                        <div class="piece <%= cell.side === 'RED' ? 'piece-red' : 'piece-blue' %> <%= isLastPos ? 'highlight' : '' %>"
+                             style="position: absolute; left: <%= x %>px; top: <%= y %>px;">
+                            <%= cell.name %>
+                        </div>
+                    <% } %>
+                <% } %>
+            </div>
+        </div>
+
+        <!-- 操作提示 -->
+        <% if (last_action) { %>
+            <div class="px-4 py-2 text-sm text-center text-slate-600 bg-slate-50 border-t border-slate-200">
+                📍 <%= last_action %>
+            </div>
+        <% } %>
+
+        <!-- 底部信息 -->
+        <div class="px-4 py-2 text-xs text-center text-slate-400 bg-slate-100">
+            第 <%= move_count %> 步 · 翻棋: /翻 A1 · 移动: /军 A1-A2
+        </div>
+    </div>
+</body>
+</html>

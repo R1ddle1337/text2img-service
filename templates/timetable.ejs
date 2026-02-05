@@ -1,0 +1,180 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@400;500;700&display=swap');
+
+        * {
+            font-family: "Microsoft YaHei", "WenQuanYi Micro Hei", "Noto Sans SC", sans-serif;
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            background: #f0f4f8;
+        }
+
+        .timetable-cell {
+            min-height: 70px;
+            vertical-align: top;
+        }
+
+        .course-card {
+            font-size: 11px;
+            line-height: 1.25;
+            padding: 4px 6px;
+            border-radius: 4px;
+            margin-bottom: 2px;
+            border-left: 3px solid;
+        }
+
+        .course-card:last-child {
+            margin-bottom: 0;
+        }
+
+        .course-name {
+            font-weight: 600;
+            font-size: 11px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .course-info {
+            font-size: 10px;
+            color: #666;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .course-weeks {
+            font-size: 9px;
+            color: #999;
+        }
+    </style>
+</head>
+
+<body class="p-3">
+    <div class="bg-white shadow-xl rounded-xl overflow-hidden" style="width: 1060px;">
+        <!-- 头部 -->
+        <div class="bg-gradient-to-r from-blue-500 to-indigo-600 px-5 py-3">
+            <div class="flex justify-between items-center">
+                <div class="flex items-center gap-2">
+                    <span class="text-2xl">📅</span>
+                    <div>
+                        <h1 class="text-xl font-bold text-white"><%= title || '课程表' %></h1>
+                        <p class="text-blue-100 text-xs"><%= subtitle || '' %></p>
+                    </div>
+                </div>
+                <div class="text-right">
+                    <div class="text-xl font-bold text-white"><%= weekday || '' %></div>
+                    <div class="text-blue-100 text-xs">共 <%= courseCount || 0 %> 节课</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 课表网格 -->
+        <div class="p-3">
+            <table class="w-full border-collapse text-center" style="table-layout: fixed;">
+                <!-- 表头 -->
+                <thead>
+                    <tr class="bg-gray-50">
+                        <th class="w-14 py-2 text-xs font-medium text-gray-500 border border-gray-200">时间</th>
+                        <% const weekdays = ['周一', '周二', '周三', '周四', '周五', '周六', '周日']; %>
+                        <% weekdays.forEach((day, idx) => { %>
+                            <th class="py-2 text-xs font-semibold border border-gray-200 <%= idx >= 5 ? 'text-orange-600 bg-orange-50' : 'text-gray-700' %>">
+                                <%= day %>
+                            </th>
+                        <% }); %>
+                    </tr>
+                </thead>
+                <tbody>
+                    <%
+                    const sections = [
+                        { label: '1-2', time: '08:00', key: 1 },
+                        { label: '3-4', time: '10:00', key: 3 },
+                        { label: '5-6', time: '14:00', key: 5 },
+                        { label: '7-8', time: '16:00', key: 7 },
+                        { label: '9-10', time: '19:00', key: 9 }
+                    ];
+
+                    const colorStyles = [
+                        { bg: '#dbeafe', border: '#3b82f6', text: '#1e40af' },
+                        { bg: '#dcfce7', border: '#22c55e', text: '#166534' },
+                        { bg: '#fae8ff', border: '#d946ef', text: '#86198f' },
+                        { bg: '#ffedd5', border: '#f97316', text: '#c2410c' },
+                        { bg: '#fce7f3', border: '#ec4899', text: '#be185d' },
+                        { bg: '#ccfbf1', border: '#14b8a6', text: '#0f766e' },
+                        { bg: '#e0e7ff', border: '#6366f1', text: '#4338ca' },
+                        { bg: '#fef3c7', border: '#f59e0b', text: '#b45309' },
+                        { bg: '#cffafe', border: '#06b6d4', text: '#0e7490' },
+                        { bg: '#f1f5f9', border: '#64748b', text: '#475569' }
+                    ];
+
+                    const courseColorMap = {};
+                    let colorIdx = 0;
+
+                    function getColor(name) {
+                        if (!courseColorMap[name]) {
+                            courseColorMap[name] = colorStyles[colorIdx % colorStyles.length];
+                            colorIdx++;
+                        }
+                        return courseColorMap[name];
+                    }
+
+                    function getCourses(wd, key) {
+                        if (!grid || !grid[wd]) return [];
+                        return grid[wd][key] || [];
+                    }
+                    %>
+
+                    <% sections.forEach((sec, sIdx) => { %>
+                        <tr>
+                            <td class="py-1 px-1 border border-gray-200 bg-gray-50">
+                                <div class="text-xs font-medium text-gray-600"><%= sec.label %></div>
+                                <div class="text-xs text-gray-400" style="font-size: 9px;"><%= sec.time %></div>
+                            </td>
+
+                            <% for(let wd = 1; wd <= 7; wd++) { %>
+                                <td class="p-1 border border-gray-200 timetable-cell <%= wd >= 6 ? 'bg-orange-50/30' : '' %>">
+                                    <% const courses = getCourses(wd, sec.key); %>
+                                    <% courses.forEach(c => { %>
+                                        <% const clr = getColor(c.name); %>
+                                        <div class="course-card text-left" style="background: <%= clr.bg %>; border-left-color: <%= clr.border %>;">
+                                            <div class="course-name" style="color: <%= clr.text %>;"><%= c.name %></div>
+                                            <% if (c.location) { %>
+                                                <div class="course-info"><%= c.location %></div>
+                                            <% } %>
+                                            <% if (c.teacher) { %>
+                                                <div class="course-info"><%= c.teacher %></div>
+                                            <% } %>
+                                            <% if (c.weeks) { %>
+                                                <div class="course-weeks">[<%= c.weeks %>]</div>
+                                            <% } %>
+                                        </div>
+                                    <% }); %>
+                                </td>
+                            <% } %>
+                        </tr>
+                    <% }); %>
+                </tbody>
+            </table>
+        </div>
+
+        <!-- 底部 -->
+        <div class="bg-gray-50 px-5 py-2 border-t border-gray-100">
+            <div class="flex justify-between items-center text-xs text-gray-400">
+                <span>beingdragonbot</span>
+                <span>Puppeteer</span>
+            </div>
+        </div>
+    </div>
+</body>
+
+</html>

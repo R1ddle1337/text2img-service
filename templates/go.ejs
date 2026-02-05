@@ -1,0 +1,229 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@400;500;700&display=swap" rel="stylesheet">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Noto Sans SC', sans-serif;
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+            display: inline-block;
+        }
+        .board-container {
+            position: relative;
+            background: linear-gradient(145deg, #DEB887 0%, #D2A679 50%, #C4956A 100%);
+            border-radius: 8px;
+            box-shadow: inset 0 2px 4px rgba(255,255,255,0.2), 0 8px 20px rgba(0,0,0,0.4);
+        }
+        .stone {
+            position: absolute;
+            border-radius: 50%;
+            z-index: 10;
+            transform: translate(-50%, -50%);
+        }
+        .stone-black {
+            background: radial-gradient(circle at 35% 35%, #555, #222 50%, #000 100%);
+            box-shadow: 2px 2px 3px rgba(0,0,0,0.5);
+        }
+        .stone-white {
+            background: radial-gradient(circle at 35% 35%, #fff, #eee 50%, #ccc 100%);
+            box-shadow: 2px 2px 3px rgba(0,0,0,0.3);
+        }
+        .last-marker {
+            position: absolute;
+            border-radius: 50%;
+            z-index: 11;
+            transform: translate(-50%, -50%);
+            background: #ef4444;
+            box-shadow: 0 0 3px rgba(239,68,68,0.8);
+        }
+        .coord-label {
+            font-size: 11px;
+            color: #5D4037;
+            font-weight: 500;
+            text-align: center;
+            line-height: 1;
+        }
+        @keyframes pulse {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.05); }
+        }
+        .winner-banner { animation: pulse 2s ease-in-out infinite; }
+    </style>
+</head>
+<body>
+    <%
+    const gap = board_size === 19 ? 28 : (board_size === 13 ? 32 : 36);
+    const stoneSize = Math.floor(gap * 0.9);
+    const padding = Math.floor(gap * 0.8);
+    const boardPx = (board_size - 1) * gap;
+    const totalPx = boardPx + padding * 2;
+    const labels = 'ABCDEFGHJKLMNOPQRST'.slice(0, board_size);
+    const coordSpace = 20;
+    const outerWidth = totalPx + coordSpace * 2;
+
+    // 星位点
+    let starPoints = [];
+    if (board_size === 9) {
+        starPoints = [[2,2],[6,2],[4,4],[2,6],[6,6]];
+    } else if (board_size === 13) {
+        starPoints = [[3,3],[9,3],[6,6],[3,9],[9,9]];
+    } else if (board_size === 19) {
+        starPoints = [[3,3],[9,3],[15,3],[3,9],[9,9],[15,9],[3,15],[9,15],[15,15]];
+    }
+    %>
+
+    <div style="width: <%= outerWidth + 32 %>px;">
+        <!-- 头部 -->
+        <div class="bg-gradient-to-r from-amber-700 to-yellow-600 p-5 text-white rounded-t-xl">
+            <div class="flex items-center justify-between">
+                <div class="flex items-center gap-3">
+                    <span class="text-3xl">⚫</span>
+                    <div>
+                        <h1 class="text-2xl font-bold">围棋</h1>
+                        <p class="text-amber-100 text-sm"><%= board_size %>×<%= board_size %> · <%= subtitle || '对局中' %></p>
+                    </div>
+                </div>
+                <div class="text-right">
+                    <% if (is_finished && winner) { %>
+                        <span class="bg-white/20 px-3 py-1 rounded-full text-sm winner-banner inline-block">
+                            🏆 <%= winner === 'B' ? '黑方' : '白方' %>胜
+                        </span>
+                    <% } else if (!player_white_name) { %>
+                        <span class="bg-white/20 px-3 py-1 rounded-full text-sm">等待加入</span>
+                    <% } else { %>
+                        <span class="bg-white/20 px-3 py-1 rounded-full text-sm">
+                            <%= current_turn === 'B' ? '⚫ 黑方' : '⚪ 白方' %>回合
+                        </span>
+                    <% } %>
+                </div>
+            </div>
+        </div>
+
+        <!-- 棋盘区域 -->
+        <div class="bg-gradient-to-b from-amber-100 to-amber-50" style="padding: 16px;">
+            <div style="position: relative; width: <%= outerWidth %>px; height: <%= outerWidth %>px; margin: 0 auto;">
+
+                <!-- 顶部坐标 -->
+                <% for (let x = 0; x < board_size; x++) { %>
+                    <div class="coord-label" style="position: absolute; left: <%= coordSpace + padding + x * gap - 6 %>px; top: 0; width: 12px;">
+                        <%= labels[x] %>
+                    </div>
+                <% } %>
+                <!-- 底部坐标 -->
+                <% for (let x = 0; x < board_size; x++) { %>
+                    <div class="coord-label" style="position: absolute; left: <%= coordSpace + padding + x * gap - 6 %>px; bottom: 0; width: 12px;">
+                        <%= labels[x] %>
+                    </div>
+                <% } %>
+                <!-- 左侧坐标 -->
+                <% for (let y = 0; y < board_size; y++) { %>
+                    <div class="coord-label" style="position: absolute; top: <%= coordSpace + padding + (board_size - 1 - y) * gap - 6 %>px; left: 0; width: <%= coordSpace - 2 %>px; height: 12px; line-height: 12px; text-align: right;">
+                        <%= y + 1 %>
+                    </div>
+                <% } %>
+                <!-- 右侧坐标 -->
+                <% for (let y = 0; y < board_size; y++) { %>
+                    <div class="coord-label" style="position: absolute; top: <%= coordSpace + padding + (board_size - 1 - y) * gap - 6 %>px; right: 0; width: <%= coordSpace - 2 %>px; height: 12px; line-height: 12px; text-align: left;">
+                        <%= y + 1 %>
+                    </div>
+                <% } %>
+
+                <!-- 棋盘本体 -->
+                <div class="board-container" style="position: absolute; left: <%= coordSpace %>px; top: <%= coordSpace %>px; width: <%= totalPx %>px; height: <%= totalPx %>px;">
+
+                    <!-- SVG 画线 -->
+                    <svg width="<%= totalPx %>" height="<%= totalPx %>" style="position: absolute; top: 0; left: 0;">
+                        <!-- 网格线 -->
+                        <% for (let i = 0; i < board_size; i++) { %>
+                            <!-- 水平线 -->
+                            <line x1="<%= padding %>" y1="<%= padding + i * gap %>"
+                                  x2="<%= padding + boardPx %>" y2="<%= padding + i * gap %>"
+                                  stroke="#5D4037" stroke-width="1" />
+                            <!-- 垂直线 -->
+                            <line x1="<%= padding + i * gap %>" y1="<%= padding %>"
+                                  x2="<%= padding + i * gap %>" y2="<%= padding + boardPx %>"
+                                  stroke="#5D4037" stroke-width="1" />
+                        <% } %>
+
+                        <!-- 星位点 -->
+                        <% starPoints.forEach(function(p) { %>
+                            <circle cx="<%= padding + p[0] * gap %>" cy="<%= padding + (board_size - 1 - p[1]) * gap %>"
+                                    r="<%= board_size === 19 ? 3 : 4 %>" fill="#5D4037" />
+                        <% }); %>
+                    </svg>
+
+                    <!-- 棋子层 -->
+                    <% for (let y = 0; y < board_size; y++) { %>
+                        <% for (let x = 0; x < board_size; x++) { %>
+                            <%
+                            const idx = y * board_size + x;
+                            const stone = board[idx];
+                            const cx = padding + x * gap;
+                            const cy = padding + (board_size - 1 - y) * gap;
+                            const isLast = (last_move === idx);
+                            %>
+                            <% if (stone === 'B') { %>
+                                <div class="stone stone-black" style="left: <%= cx %>px; top: <%= cy %>px; width: <%= stoneSize %>px; height: <%= stoneSize %>px;"></div>
+                                <% if (isLast) { %>
+                                    <div class="last-marker" style="left: <%= cx %>px; top: <%= cy %>px; width: <%= Math.floor(stoneSize * 0.3) %>px; height: <%= Math.floor(stoneSize * 0.3) %>px;"></div>
+                                <% } %>
+                            <% } else if (stone === 'W') { %>
+                                <div class="stone stone-white" style="left: <%= cx %>px; top: <%= cy %>px; width: <%= stoneSize %>px; height: <%= stoneSize %>px;"></div>
+                                <% if (isLast) { %>
+                                    <div class="last-marker" style="left: <%= cx %>px; top: <%= cy %>px; width: <%= Math.floor(stoneSize * 0.3) %>px; height: <%= Math.floor(stoneSize * 0.3) %>px;"></div>
+                                <% } %>
+                            <% } %>
+                        <% } %>
+                    <% } %>
+                </div>
+            </div>
+        </div>
+
+        <!-- 玩家信息 -->
+        <div class="bg-slate-800 p-4 rounded-b-xl">
+            <div class="flex justify-between items-center">
+                <div class="flex items-center gap-3 <%= current_turn === 'B' && !is_finished ? 'opacity-100' : 'opacity-60' %>">
+                    <div class="w-10 h-10 rounded-full bg-gradient-to-br from-gray-700 to-black flex items-center justify-center shadow-lg">
+                        <span class="text-white text-lg">⚫</span>
+                    </div>
+                    <div>
+                        <p class="text-white font-medium"><%= black_player_name || '黑方' %></p>
+                        <p class="text-gray-400 text-xs">提子: <%= captured_white || 0 %></p>
+                    </div>
+                </div>
+                <div class="text-center">
+                    <p class="text-gray-400 text-sm">第 <%= move_count || 0 %> 手</p>
+                    <% if (is_finished) { %>
+                        <p class="text-amber-400 text-xs mt-1">游戏结束</p>
+                    <% } %>
+                </div>
+                <div class="flex items-center gap-3 flex-row-reverse <%= current_turn === 'W' && !is_finished ? 'opacity-100' : 'opacity-60' %>">
+                    <div class="w-10 h-10 rounded-full bg-gradient-to-br from-white to-gray-300 flex items-center justify-center shadow-lg">
+                        <span class="text-gray-700 text-lg">⚪</span>
+                    </div>
+                    <div class="text-right">
+                        <p class="text-white font-medium"><%= player_white_name || '等待加入' %></p>
+                        <p class="text-gray-400 text-xs">提子: <%= captured_black || 0 %></p>
+                    </div>
+                </div>
+            </div>
+            <% if (!is_finished && player_white_name) { %>
+                <div class="mt-3 pt-3 border-t border-slate-700 text-center">
+                    <p class="text-gray-500 text-xs">
+                        发送 <span class="text-amber-400">/落子 坐标</span> 落子（如 /落子 D4）· <span class="text-amber-400">/虚着</span> 跳过
+                    </p>
+                </div>
+            <% } else if (!player_white_name) { %>
+                <div class="mt-3 pt-3 border-t border-slate-700 text-center">
+                    <p class="text-gray-500 text-xs">
+                        发送 <span class="text-amber-400">/加入围棋</span> 参与对局
+                    </p>
+                </div>
+            <% } %>
+        </div>
+    </div>
+</body>
+</html>

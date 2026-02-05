@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@400;500;700&display=swap');
+        body {
+            font-family: 'Noto Sans SC', 'Microsoft YaHei', sans-serif;
+            margin: 0;
+            padding: 0;
+        }
+        .game-cell {
+            width: 80px;
+            height: 80px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 48px;
+            font-weight: bold;
+            background: linear-gradient(145deg, #f8f9fa, #e9ecef);
+            border-radius: 8px;
+            box-shadow: inset 2px 2px 4px rgba(255,255,255,0.8), inset -2px -2px 4px rgba(0,0,0,0.1);
+        }
+        .cell-x {
+            color: #e67e22;
+            text-shadow: 2px 2px 4px rgba(230, 126, 34, 0.3);
+        }
+        .cell-o {
+            color: #3498db;
+            text-shadow: 2px 2px 4px rgba(52, 152, 219, 0.3);
+        }
+        .cell-empty {
+            color: #bdc3c7;
+            font-size: 24px;
+        }
+        .winner-banner {
+            animation: pulse 1.5s ease-in-out infinite;
+        }
+        @keyframes pulse {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.05); }
+        }
+    </style>
+</head>
+<body class="bg-gray-100">
+    <div class="w-[420px] bg-white rounded-2xl shadow-xl overflow-hidden">
+        <!-- Header -->
+        <div class="bg-gradient-to-r from-orange-500 to-amber-500 p-5 text-white">
+            <div class="flex items-center gap-3">
+                <span class="text-3xl">🎮</span>
+                <div>
+                    <h1 class="text-xl font-bold">井字棋</h1>
+                    <p class="text-orange-100 text-sm"><%= subtitle || '' %></p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Game Board -->
+        <div class="p-6">
+            <div class="flex justify-center mb-4">
+                <div class="grid grid-cols-3 gap-2 p-3 bg-gray-100 rounded-xl">
+                    <% for(let i = 0; i < 9; i++) { %>
+                        <% const cell = board[i]; %>
+                        <div class="game-cell <%= cell === 'X' ? 'cell-x' : cell === 'O' ? 'cell-o' : 'cell-empty' %>">
+                            <%= cell === 'X' ? 'X' : cell === 'O' ? 'O' : (i + 1) %>
+                        </div>
+                    <% } %>
+                </div>
+            </div>
+
+            <!-- Status -->
+            <% if (is_finished) { %>
+                <div class="winner-banner text-center py-3 px-4 rounded-xl mb-4 <%= winner ? (winner === 'X' ? 'bg-orange-100' : 'bg-blue-100') : 'bg-gray-100' %>">
+                    <% if (winner === 'X') { %>
+                        <p class="text-2xl font-bold text-orange-500">🏆 X 方获胜！</p>
+                        <p class="text-orange-600 text-sm"><%= player_x_name %></p>
+                    <% } else if (winner === 'O') { %>
+                        <p class="text-2xl font-bold text-blue-500">🏆 O 方获胜！</p>
+                        <p class="text-blue-600 text-sm"><%= player_o_name %></p>
+                    <% } else { %>
+                        <p class="text-2xl font-bold text-gray-500">🤝 平局！</p>
+                    <% } %>
+                </div>
+            <% } else if (!player_o_name) { %>
+                <div class="text-center py-3 px-4 rounded-xl mb-4 bg-yellow-50 border border-yellow-200">
+                    <p class="text-yellow-700 font-medium">⏳ 等待对手加入...</p>
+                    <p class="text-yellow-600 text-sm">发送 /加入井字棋 参与游戏</p>
+                </div>
+            <% } else { %>
+                <div class="text-center py-3 px-4 rounded-xl mb-4 <%= current_turn === 'X' ? 'bg-orange-50 border border-orange-200' : 'bg-blue-50 border border-blue-200' %>">
+                    <p class="<%= current_turn === 'X' ? 'text-orange-600' : 'text-blue-600' %> font-medium">
+                        👉 轮到 <%= current_turn %> 方
+                    </p>
+                    <p class="<%= current_turn === 'X' ? 'text-orange-500' : 'text-blue-500' %> text-sm">
+                        <%= current_turn === 'X' ? player_x_name : player_o_name %>
+                    </p>
+                </div>
+            <% } %>
+
+            <!-- Players -->
+            <div class="flex justify-between items-center px-2">
+                <div class="flex items-center gap-2">
+                    <div class="w-10 h-10 rounded-full bg-orange-100 flex items-center justify-center">
+                        <span class="text-orange-500 font-bold text-lg">X</span>
+                    </div>
+                    <div>
+                        <p class="text-sm font-medium text-gray-700"><%= player_x_name %></p>
+                        <p class="text-xs text-gray-400">先手</p>
+                    </div>
+                </div>
+                <div class="text-2xl text-gray-300">VS</div>
+                <div class="flex items-center gap-2">
+                    <div>
+                        <p class="text-sm font-medium text-gray-700 text-right"><%= player_o_name || '等待中...' %></p>
+                        <p class="text-xs text-gray-400 text-right">后手</p>
+                    </div>
+                    <div class="w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center">
+                        <span class="text-blue-500 font-bold text-lg">O</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Footer -->
+        <div class="bg-gray-50 px-5 py-3 text-center">
+            <p class="text-xs text-gray-400">发送 /下棋 &lt;1-9&gt; 落子</p>
+        </div>
+    </div>
+</body>
+</html>

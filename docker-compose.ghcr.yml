@@ -1,0 +1,14 @@
+version: "3.8"
+
+services:
+  text2img:
+    image: ghcr.io/r1ddle1337/riddletext2img:latest
+    container_name: text2img-service
+    ports:
+      - "51234:51234"
+    environment:
+      - NODE_ENV=production
+    restart: unless-stopped
+    # 如果要自定义模板，再打开下面的 volume 映射
+    # volumes:
+    #   - ./templates:/app/templates

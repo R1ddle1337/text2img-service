@@ -1,0 +1,14 @@
+version: '3.8'
+
+services:
+  text2img:
+    build: .
+    container_name: text2img-service
+    ports:
+      - "51234:51234"
+    volumes:
+      # 挂载模板目录，方便修改样式
+      - ./templates:/app/templates
+    restart: unless-stopped
+    environment:
+      - NODE_ENV=production

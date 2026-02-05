@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        * {
+            font-family: "Microsoft YaHei", "WenQuanYi Micro Hei", "Noto Sans CJK SC", sans-serif;
+        }
+    </style>
+</head>
+
+<body class="bg-gradient-to-br from-yellow-400 via-amber-500 to-yellow-600 p-6">
+    <div class="max-w-lg mx-auto">
+        <div class="bg-gray-900 rounded-2xl shadow-2xl overflow-hidden">
+            <!-- 头部 -->
+            <div class="bg-gradient-to-r from-yellow-500 to-amber-600 px-6 py-4">
+                <div class="flex items-center justify-between">
+                    <div class="flex items-center gap-3">
+                        <div class="text-3xl">🏆</div>
+                        <div>
+                            <h1 class="text-xl font-bold text-gray-900">实时金价</h1>
+                            <p class="text-gray-700 text-sm">
+                                <%= date %>
+                            </p>
+                        </div>
+                    </div>
+                    <div class="text-3xl">💰</div>
+                </div>
+            </div>
+
+            <!-- 实时金价 -->
+            <% if (metals && metals.length> 0) { %>
+                <div class="p-4 border-b border-gray-800">
+                    <h2 class="text-yellow-500 font-bold mb-3 flex items-center gap-2">
+                        <span>📊</span> 国际金价
+                    </h2>
+                    <div class="grid grid-cols-2 gap-3">
+                        <% metals.slice(0, 4).forEach(function(m) { %>
+                            <div class="bg-gray-800 rounded-lg p-3">
+                                <div class="text-gray-400 text-xs">
+                                    <%= m.name %>
+                                </div>
+                                <div class="text-yellow-400 font-bold text-lg">
+                                    <%= m.today_price %>
+                                </div>
+                                <div class="text-gray-500 text-xs">
+                                    <%= m.unit %>
+                                </div>
+                            </div>
+                            <% }); %>
+                    </div>
+                </div>
+                <% } %>
+
+                    <!-- 品牌金价 -->
+                    <% if (stores && stores.length> 0) { %>
+                        <div class="p-4 border-b border-gray-800">
+                            <h2 class="text-yellow-500 font-bold mb-3 flex items-center gap-2">
+                                <span>💎</span> 品牌金价
+                            </h2>
+                            <div class="space-y-2">
+                                <% stores.slice(0, 6).forEach(function(s) { %>
+                                    <div class="flex justify-between items-center bg-gray-800 rounded-lg px-4 py-2">
+                                        <span class="text-white">
+                                            <%= s.brand %>
+                                        </span>
+                                        <span class="text-yellow-400 font-medium">
+                                            <%= s.formatted %>
+                                        </span>
+                                    </div>
+                                    <% }); %>
+                            </div>
+                        </div>
+                        <% } %>
+
+                            <!-- 回收价格 -->
+                            <% if (recycle && recycle.length> 0) { %>
+                                <div class="p-4">
+                                    <h2 class="text-yellow-500 font-bold mb-3 flex items-center gap-2">
+                                        <span>♻️</span> 回收价格
+                                    </h2>
+                                    <div class="grid grid-cols-3 gap-2">
+                                        <% recycle.slice(0, 3).forEach(function(r) { %>
+                                            <div class="bg-gray-800 rounded-lg p-2 text-center">
+                                                <div class="text-gray-400 text-xs">
+                                                    <%= r.type %>
+                                                </div>
+                                                <div class="text-green-400 font-bold text-sm">
+                                                    <%= r.formatted %>
+                                                </div>
+                                            </div>
+                                            <% }); %>
+                                    </div>
+                                </div>
+                                <% } %>
+
+                                    <!-- 底部 -->
+                                    <div class="bg-gray-800 px-6 py-2 text-center">
+                                        <span class="text-xs text-gray-500">60s语录合集 · 数据仅供参考</span>
+                                    </div>
+        </div>
+    </div>
+</body>
+
+</html>

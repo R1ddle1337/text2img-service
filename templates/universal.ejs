@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@400;500;700&display=swap');
+
+        * {
+            font-family: "Microsoft YaHei", "WenQuanYi Micro Hei", "Noto Sans SC", sans-serif;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            background: #f5f5f5;
+        }
+    </style>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        primary: '#e67e22',
+                        secondary: '#d35400',
+                    }
+                }
+            }
+        }
+    </script>
+</head>
+
+<body class="p-4">
+    <div class="max-w-2xl mx-auto bg-white shadow-lg rounded-lg overflow-hidden">
+        <!-- 头部 -->
+        <div class="bg-gradient-to-r from-orange-100 to-orange-50 px-6 py-5 border-b-4 border-orange-400">
+            <div class="flex justify-between items-start">
+                <div>
+                    <h1 class="text-2xl font-bold text-gray-800 mb-1">
+                        <% if (typeof icon !=='undefined' ) { %><span class="mr-2">
+                                <%= icon %>
+                            </span>
+                            <% } %>
+                                <%= title %>
+                    </h1>
+                    <p class="text-gray-500 text-sm">
+                        <%= subtitle %>
+                            <% if (typeof extra !=='undefined' ) { %>
+                                <span class="text-orange-500 ml-2">★ <%= extra %></span>
+                                <% } %>
+                    </p>
+                </div>
+                <% if (typeof weekday !=='undefined' ) { %>
+                    <div class="text-right">
+                        <div class="text-4xl font-bold text-orange-500">
+                            <%= weekday %>
+                        </div>
+                    </div>
+                    <% } %>
+            </div>
+        </div>
+
+        <!-- 内容区域 -->
+        <div class="px-6 py-4">
+            <% if (typeof items !=='undefined' && items.length> 0) { %>
+                <!-- 列表模式 -->
+                <div class="space-y-3">
+                    <% items.forEach(function(item, index) { %>
+                        <div
+                            class="flex items-start gap-3 py-2 <%= index < items.length - 1 ? 'border-b border-gray-100' : '' %>">
+                            <span
+                                class="flex-shrink-0 w-6 h-6 bg-orange-500 text-white text-xs font-bold rounded-full flex items-center justify-center">
+                                <%= index + 1 %>
+                            </span>
+                            <p class="text-gray-700 text-sm leading-relaxed flex-1">
+                                <%= item %>
+                            </p>
+                        </div>
+                        <% }); %>
+                </div>
+                <% } else if (typeof content !=='undefined' ) { %>
+                    <!-- 文本模式 -->
+                    <div class="py-4">
+                        <p class="text-gray-700 text-base leading-relaxed whitespace-pre-line">
+                            <%= content %>
+                        </p>
+                    </div>
+                    <% } %>
+
+                        <% if (typeof table !=='undefined' && table.length> 0) { %>
+                            <!-- 表格模式 -->
+                            <div class="mt-4 border border-gray-200 rounded-lg overflow-hidden">
+                                <% table.forEach(function(row, index) { %>
+                                    <div
+                                        class="flex justify-between items-center px-4 py-2 <%= index % 2 === 0 ? 'bg-gray-50' : 'bg-white' %> <%= index < table.length - 1 ? 'border-b border-gray-200' : '' %>">
+                                        <span class="text-gray-600 text-sm">
+                                            <%= row.label %>
+                                        </span>
+                                        <span class="text-orange-600 font-medium text-sm">
+                                            <%= row.value %>
+                                        </span>
+                                    </div>
+                                    <% }); %>
+                            </div>
+                            <% } %>
+
+                                <% if (typeof stats !=='undefined' ) { %>
+                                    <!-- 统计卡片模式 -->
+                                    <div class="grid grid-cols-2 gap-4 mt-4">
+                                        <% Object.keys(stats).forEach(function(key) { %>
+                                            <div class="bg-orange-50 rounded-lg p-4 text-center">
+                                                <div class="text-2xl font-bold text-orange-600">
+                                                    <%= stats[key] %>
+                                                </div>
+                                                <div class="text-gray-500 text-xs mt-1">
+                                                    <%= key %>
+                                                </div>
+                                            </div>
+                                            <% }); %>
+                                    </div>
+                                    <% } %>
+        </div>
+
+        <% if (typeof quote !=='undefined' ) { %>
+            <!-- 引用/提示 -->
+            <div class="mx-6 mb-4 bg-orange-50 rounded-lg px-4 py-3 border-l-4 border-orange-400">
+                <p class="text-orange-700 text-sm italic">
+                    <%= quote %>
+                </p>
+            </div>
+            <% } %>
+
+                <!-- 底部 -->
+                <div class="bg-gray-50 px-6 py-3 border-t border-gray-200">
+                    <div class="flex justify-between items-center text-xs text-gray-400">
+                        <span>
+                            <%= typeof sources !=='undefined' ? sources : '基于 beingdragonbot' %>
+                        </span>
+                        <span>
+                            <% if (typeof timestamp !=='undefined' ) { %>
+                                <%= timestamp %>
+                                    <% } else { %>
+                                        React 界面 / TailwindCSS 样式 / Puppeteer 渲染
+                                        <% } %>
+                        </span>
+                    </div>
+                </div>
+    </div>
+</body>
+
+</html>
