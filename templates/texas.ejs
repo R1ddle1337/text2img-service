@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@400;500;700;800&display=swap');
+        body {
+            margin: 0;
+            padding: 0;
+            font-family: 'Noto Sans SC', 'Microsoft YaHei', sans-serif;
+            display: inline-block;
+            background: radial-gradient(circle at 20% 0%, #0f172a 0%, #020617 55%, #01030a 100%);
+        }
+        .card {
+            width: 54px;
+            height: 74px;
+            border-radius: 10px;
+            background: linear-gradient(160deg, #ffffff 0%, #f5f5f5 100%);
+            border: 1px solid rgba(15,23,42,0.12);
+            box-shadow: 0 10px 16px rgba(0,0,0,0.18);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-direction: column;
+            font-weight: 800;
+            line-height: 1;
+        }
+        .card-back {
+            background: linear-gradient(160deg, #334155 0%, #1e293b 100%);
+            color: #cbd5e1;
+            border-color: rgba(255,255,255,0.08);
+        }
+        .s-red { color: #dc2626; }
+        .s-black { color: #0f172a; }
+        .table-felt {
+            background:
+                radial-gradient(circle at 20% 20%, rgba(255,255,255,0.06), transparent 35%),
+                radial-gradient(circle at 80% 70%, rgba(255,255,255,0.05), transparent 30%),
+                linear-gradient(145deg, #0f766e 0%, #115e59 45%, #134e4a 100%);
+            border: 3px solid #78350f;
+            box-shadow: inset 0 2px 12px rgba(0,0,0,0.28), 0 18px 36px rgba(0,0,0,0.35);
+        }
+        .chip-pill {
+            background: rgba(255,255,255,0.16);
+            border: 1px solid rgba(255,255,255,0.24);
+            backdrop-filter: blur(2px);
+        }
+    </style>
+</head>
+<body>
+    <%
+    const comm = Array.isArray(community_cards) ? community_cards : [];
+    const pls = Array.isArray(players) ? players : [];
+    const winners = Array.isArray(winner_names) ? winner_names : [];
+    const sym = { S: '♠', H: '♥', D: '♦', C: '♣' };
+    function rankOf(c) { return (c && c.length >= 2) ? c[0] : '?'; }
+    function suitOf(c) { return (c && c.length >= 2) ? c[1] : '?'; }
+    function redSuit(s) { return s === 'H' || s === 'D'; }
+    const width = 860;
+    %>
+
+    <div style="width: <%= width %>px;">
+        <div class="rounded-t-2xl overflow-hidden">
+            <div class="px-7 py-5 text-white" style="background: linear-gradient(90deg, #065f46 0%, #0d9488 42%, #ca8a04 100%);">
+                <div class="flex items-center justify-between">
+                    <div class="flex items-center gap-3">
+                        <div class="text-3xl">🃏</div>
+                        <div>
+                            <div class="text-2xl font-bold">德州扑克</div>
+                            <div class="text-white/80 text-sm"><%= subtitle || '' %></div>
+                        </div>
+                    </div>
+                    <div class="text-right">
+                        <div class="chip-pill rounded-full px-3 py-1 text-sm font-semibold inline-block">
+                            <%= phase_text || '等待玩家' %>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="bg-white px-6 py-5 rounded-b-2xl shadow-2xl">
+            <div class="table-felt rounded-2xl p-5 text-white">
+                <div class="flex justify-between items-center mb-4">
+                    <div class="chip-pill rounded-xl px-3 py-2 text-sm">
+                        底池: <span class="font-bold"><%= pot || 0 %></span>
+                    </div>
+                    <div class="chip-pill rounded-xl px-3 py-2 text-sm">
+                        当前下注: <span class="font-bold"><%= current_bet || 0 %></span>
+                    </div>
+                </div>
+
+                <div class="mb-5">
+                    <div class="text-xs text-white/70 mb-2">公共牌</div>
+                    <div class="flex gap-2">
+                        <% for (let i = 0; i < 5; i++) { %>
+                            <% if (i < comm.length) { const c = comm[i]; const s = suitOf(c); %>
+                                <div class="card <%= redSuit(s) ? 's-red' : 's-black' %>">
+                                    <div class="text-lg"><%= rankOf(c) %></div>
+                                    <div class="text-2xl mt-1"><%= sym[s] || '?' %></div>
+                                </div>
+                            <% } else { %>
+                                <div class="card card-back">
+                                    <div class="text-xs">待发</div>
+                                    <div class="text-xl mt-1">★</div>
+                                </div>
+                            <% } %>
+                        <% } %>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-2 gap-3">
+                    <% pls.forEach(function(p) { %>
+                        <div class="rounded-xl px-3 py-3 <%= p.folded ? 'bg-black/25 opacity-70' : 'bg-white/10' %> <%= p.is_turn ? 'ring-2 ring-yellow-300' : '' %>">
+                            <div class="flex justify-between items-start mb-2">
+                                <div>
+                                    <div class="text-sm font-semibold"><%= p.name %> <%= p.folded ? '(弃牌)' : '' %></div>
+                                    <% if (p.hand) { %><div class="text-xs text-amber-200 mt-1"><%= p.hand %></div><% } %>
+                                </div>
+                                <div class="text-right text-xs text-white/80">
+                                    <div>筹码: <%= p.stack %></div>
+                                    <div>本轮: <%= p.bet %></div>
+                                </div>
+                            </div>
+                            <div class="flex gap-2">
+                                <% (p.cards || []).forEach(function(c) { const s = suitOf(c); %>
+                                    <div class="card <%= redSuit(s) ? 's-red' : 's-black' %>" style="width:42px;height:58px;border-radius:8px;">
+                                        <div class="text-sm"><%= rankOf(c) %></div>
+                                        <div class="text-lg mt-1"><%= sym[s] || '?' %></div>
+                                    </div>
+                                <% }); %>
+                            </div>
+                        </div>
+                    <% }); %>
+                </div>
+            </div>
+
+            <div class="mt-4 flex justify-between text-xs text-slate-500">
+                <div class="truncate pr-3">最近动作: <%= last_action || '无' %></div>
+                <% if (is_finished) { %>
+                    <div class="font-semibold text-emerald-700">赢家: <%= winners.join(', ') || '无' %></div>
+                <% } else { %>
+                    <div>指令: /弃牌 /过牌 /跟注 /加注 40</div>
+                <% } %>
+            </div>
+        </div>
+    </div>
+</body>
+</html>
+

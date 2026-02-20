@@ -1,0 +1,244 @@
+﻿<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <style>
+        <% const isDark=theme==='dark' ; %>
+
+        :root {
+            --bg: <%= isDark ? '#0f172a' : '#fff8f0' %>;
+            --card: <%= isDark ? '#111827' : '#ffffff' %>;
+            --line: <%= isDark ? '#1f2937' : '#f3d8ba' %>;
+            --title: <%= isDark ? '#f8fafc' : '#7c2d12' %>;
+            --text: <%= isDark ? '#e5e7eb' : '#292524' %>;
+            --muted: <%= isDark ? '#94a3b8' : '#7c5b4d' %>;
+            --accent: <%= isDark ? '#fb923c' : '#ea580c' %>;
+            --accent-soft: <%= isDark ? '#1f2937' : '#fff1e6' %>;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: "Microsoft YaHei", "WenQuanYi Micro Hei", "Noto Sans SC", sans-serif;
+        }
+
+        body {
+            background: radial-gradient(circle at top, <%= isDark ? '#1f2937' : '#ffe6d0' %>, var(--bg));
+            color: var(--text);
+            padding: 22px;
+        }
+
+        .card {
+            background: var(--card);
+            border: 1px solid var(--line);
+            border-radius: 18px;
+            overflow: hidden;
+            box-shadow: 0 14px 40px rgba(0, 0, 0, 0.18);
+        }
+
+        .header {
+            padding: 20px 24px;
+            border-bottom: 1px solid var(--line);
+            background: linear-gradient(135deg, <%= isDark ? '#111827' : '#fff5eb' %>, <%= isDark ? '#1f2937' : '#ffe9d5' %>);
+        }
+
+        .title-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .title {
+            font-size: 30px;
+            font-weight: 700;
+            color: var(--title);
+            line-height: 1.2;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .subtitle {
+            margin-top: 6px;
+            font-size: 15px;
+            color: var(--muted);
+        }
+
+        .page {
+            font-size: 13px;
+            color: var(--muted);
+            background: var(--accent-soft);
+            border: 1px solid var(--line);
+            border-radius: 999px;
+            padding: 5px 10px;
+            white-space: nowrap;
+        }
+
+        .content {
+            padding: 18px 22px 22px;
+            display: grid;
+            gap: 14px;
+        }
+
+        .summary {
+            border: 1px solid var(--line);
+            background: var(--accent-soft);
+            border-radius: 12px;
+            padding: 12px 14px;
+            font-size: 16px;
+            line-height: 1.55;
+            white-space: pre-wrap;
+            word-break: break-word;
+        }
+
+        .stats {
+            display: grid;
+            grid-template-columns: repeat(3, minmax(0, 1fr));
+            gap: 10px;
+        }
+
+        .stat {
+            border: 1px solid var(--line);
+            border-radius: 12px;
+            padding: 11px 12px;
+            background: <%= isDark ? '#0b1220' : '#fffbf7' %>;
+        }
+
+        .stat-label {
+            font-size: 12px;
+            color: var(--muted);
+            margin-bottom: 4px;
+        }
+
+        .stat-value {
+            font-size: 20px;
+            line-height: 1.25;
+            color: var(--accent);
+            font-weight: 700;
+            word-break: break-all;
+        }
+
+        .section {
+            border: 1px solid var(--line);
+            border-radius: 12px;
+            overflow: hidden;
+        }
+
+        .section-title {
+            background: var(--accent-soft);
+            border-bottom: 1px solid var(--line);
+            font-size: 14px;
+            font-weight: 700;
+            color: var(--title);
+            padding: 9px 12px;
+        }
+
+        .row {
+            display: flex;
+            justify-content: space-between;
+            gap: 14px;
+            padding: 10px 12px;
+            border-bottom: 1px dashed var(--line);
+            font-size: 14px;
+            line-height: 1.45;
+        }
+
+        .row:last-child {
+            border-bottom: none;
+        }
+
+        .row-label {
+            color: var(--muted);
+            min-width: 120px;
+            max-width: 240px;
+            word-break: break-word;
+        }
+
+        .row-value {
+            flex: 1;
+            text-align: right;
+            word-break: break-word;
+            white-space: pre-wrap;
+        }
+
+        .footer {
+            border-top: 1px solid var(--line);
+            padding: 11px 18px;
+            font-size: 12px;
+            color: var(--muted);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 12px;
+            background: <%= isDark ? '#0b1220' : '#fff9f3' %>;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="card">
+        <div class="header">
+            <div class="title-row">
+                <div class="title">
+                    <% if (icon) { %>
+                        <span><%= icon %></span>
+                    <% } %>
+                    <span><%= title || 'QFarm' %></span>
+                </div>
+                <% if (page && page.total && Number(page.total) > 1) { %>
+                    <div class="page">第 <%= page.index || 1 %>/<%= page.total %> 页</div>
+                <% } %>
+            </div>
+            <div class="subtitle"><%= subtitle || '' %></div>
+        </div>
+
+        <div class="content">
+            <% if (summary) { %>
+                <div class="summary"><%= summary %></div>
+            <% } %>
+
+            <% if (Array.isArray(stats) && stats.length > 0) { %>
+                <div class="stats">
+                    <% stats.forEach(function(stat) { %>
+                        <div class="stat">
+                            <div class="stat-label"><%= stat.label || '-' %></div>
+                            <div class="stat-value"><%= stat.value || '-' %></div>
+                        </div>
+                    <% }); %>
+                </div>
+            <% } %>
+
+            <% if (Array.isArray(sections) && sections.length > 0) { %>
+                <% sections.forEach(function(section) { %>
+                    <div class="section">
+                        <% if (section.title) { %>
+                            <div class="section-title"><%= section.title %></div>
+                        <% } %>
+                        <% (section.rows || []).forEach(function(row) { %>
+                            <div class="row">
+                                <% if (row.label) { %>
+                                    <div class="row-label"><%= row.label %></div>
+                                    <div class="row-value"><%= row.value || '' %></div>
+                                <% } else { %>
+                                    <div class="row-value" style="text-align:left"><%= row.value || '' %></div>
+                                <% } %>
+                            </div>
+                        <% }); %>
+                    </div>
+                <% }); %>
+            <% } %>
+        </div>
+
+        <div class="footer">
+            <span><%= footer || 'astrbot_plugin_qfarm' %></span>
+            <span>Puppeteer Render</span>
+        </div>
+    </div>
+</body>
+
+</html>
+

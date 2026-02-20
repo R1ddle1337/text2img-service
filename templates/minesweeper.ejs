@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@400;500;700&display=swap');
+        body {
+            margin: 0;
+            padding: 0;
+            font-family: 'Noto Sans SC', 'Microsoft YaHei', sans-serif;
+            display: inline-block;
+            background: radial-gradient(circle at 0% 0%, #1f2937 0%, #0f172a 55%, #020617 100%);
+        }
+        .cell {
+            width: var(--cell-size);
+            height: var(--cell-size);
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 700;
+            user-select: none;
+            position: relative;
+            box-shadow: inset 0 1px 0 rgba(255,255,255,0.2), 0 6px 12px rgba(0,0,0,0.2);
+        }
+        /* NOTE: do NOT use Tailwind's `hidden` class name here (it means display:none). */
+        .cell-covered {
+            background: linear-gradient(145deg, #64748b, #475569);
+            border: 1px solid rgba(255,255,255,0.1);
+        }
+        .empty {
+            background: linear-gradient(145deg, #f8fafc, #e2e8f0);
+            color: #94a3b8;
+        }
+        .flag {
+            background: linear-gradient(145deg, #f59e0b, #d97706);
+            color: #fff;
+            font-size: calc(var(--cell-size) * 0.5);
+        }
+        .mine {
+            background: linear-gradient(145deg, #334155, #1e293b);
+            color: #fff;
+            font-size: calc(var(--cell-size) * 0.45);
+        }
+        .boom {
+            background: linear-gradient(145deg, #ef4444, #991b1b);
+            color: #fff;
+            font-size: calc(var(--cell-size) * 0.45);
+            box-shadow: 0 0 0 3px rgba(248,113,113,0.35), 0 8px 20px rgba(127,29,29,0.45);
+        }
+        .n1 { color: #2563eb; }
+        .n2 { color: #16a34a; }
+        .n3 { color: #dc2626; }
+        .n4 { color: #7c3aed; }
+        .n5 { color: #b45309; }
+        .n6 { color: #0e7490; }
+        .n7 { color: #334155; }
+        .n8 { color: #111827; }
+        .coord {
+            font-size: 11px;
+            color: rgba(255,255,255,0.85);
+            font-weight: 600;
+            line-height: 1;
+        }
+    </style>
+</head>
+<body>
+    <%
+    const w = width || 9;
+    const h = height || 9;
+    const arr = Array.isArray(cells) ? cells : Array(w * h).fill('hidden');
+    const labels = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'.slice(0, w);
+    const longSide = Math.max(w, h);
+    const cellSize = longSide <= 9 ? 34 : (longSide <= 12 ? 30 : 26);
+    const gap = 6;
+    const gridW = w * cellSize + (w - 1) * gap;
+    const rowLabelW = longSide <= 9 ? 18 : 20;
+    const sideBlockW = rowLabelW * 2 + gap * 2;
+    const outerW = gridW + sideBlockW + 84;
+    %>
+
+    <div style="width: <%= outerW %>px;">
+        <div class="rounded-t-2xl overflow-hidden">
+            <div class="px-6 py-5 text-white" style="background: linear-gradient(90deg, #0ea5e9 0%, #22c55e 50%, #f59e0b 100%);">
+                <div class="flex items-center justify-between">
+                    <div class="flex items-center gap-3">
+                        <div class="text-3xl">💣</div>
+                        <div>
+                            <div class="text-2xl font-bold">扫雷</div>
+                            <div class="text-white/80 text-sm"><%= subtitle || '' %></div>
+                        </div>
+                    </div>
+                    <div class="text-right">
+                        <div class="text-sm font-semibold bg-white/20 px-3 py-1 rounded-full inline-block">
+                            <%= w %>x<%= h %> · 雷 <%= mine_count || 0 %>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="px-6 py-5 bg-white rounded-b-2xl shadow-2xl">
+            <div class="flex justify-center mb-3">
+                <div class="flex items-center" style="gap: <%= gap %>px;">
+                    <div class="coord text-right" style="width: <%= rowLabelW %>px; color: #94a3b8;"></div>
+                    <div class="flex items-center" style="gap: <%= gap %>px; width: <%= gridW %>px;">
+                        <% for (let x = 0; x < w; x++) { %>
+                            <div class="coord text-center" style="width: <%= cellSize %>px; color: #475569;"><%= labels[x] %></div>
+                        <% } %>
+                    </div>
+                    <div class="coord text-left" style="width: <%= rowLabelW %>px; color: #94a3b8;"></div>
+                </div>
+            </div>
+
+            <div class="bg-slate-800 rounded-xl p-4">
+                <div style="display: flex; flex-direction: column; gap: <%= gap %>px;">
+                    <% for (let y = h - 1; y >= 0; y--) { %>
+                        <div class="flex items-center" style="gap: <%= gap %>px;">
+                            <div class="coord text-right" style="width: <%= rowLabelW %>px;"><%= y + 1 %></div>
+                            <div style="display: grid; grid-template-columns: repeat(<%= w %>, <%= cellSize %>px); gap: <%= gap %>px; --cell-size: <%= cellSize %>px;">
+                                <% for (let x = 0; x < w; x++) { %>
+                                    <%
+                                    const idx = y * w + x;
+                                    const state = arr[idx] || 'hidden';
+                                    const cls = ['cell'];
+                                    let text = '';
+                                    if (state === 'hidden') { cls.push('cell-covered'); }
+                                    else if (state === 'flag') { cls.push('flag'); text = '⚑'; }
+                                    else if (state === 'mine') { cls.push('mine'); text = '✹'; }
+                                    else if (state === 'boom') { cls.push('boom'); text = '✹'; }
+                                    else if (state === 'empty') { cls.push('empty'); text = ''; }
+                                    else if (state.startsWith('n')) {
+                                        cls.push('empty');
+                                        cls.push(state);
+                                        text = state.slice(1);
+                                    } else {
+                                        cls.push('cell-covered');
+                                    }
+                                    %>
+                                    <div class="<%= cls.join(' ') %>"><%= text %></div>
+                                <% } %>
+                            </div>
+                            <div class="coord text-left" style="width: <%= rowLabelW %>px;"><%= y + 1 %></div>
+                        </div>
+                        <% } %>
+                </div>
+            </div>
+
+            <div class="mt-4 flex justify-between items-center text-sm">
+                <div>
+                    <div class="font-semibold text-gray-800"><%= player_name || '玩家' %></div>
+                    <div class="text-xs text-gray-400">步数: <%= move_count || 0 %></div>
+                </div>
+                <div class="text-xs text-gray-500 text-right">
+                    <div>旗子: <%= flags_used || 0 %>/<%= mine_count || 0 %></div>
+                    <% if (is_finished) { %>
+                        <div class="mt-1 <%= is_win ? 'text-green-600' : 'text-red-600' %>"><%= is_win ? '已通关' : '踩雷失败' %></div>
+                    <% } else { %>
+                        <div class="mt-1 text-slate-500">进行中</div>
+                    <% } %>
+                </div>
+            </div>
+
+            <div class="mt-3 text-center text-xs text-gray-400">
+                指令: /扫雷 · /扫开 A1 · /扫旗 A1
+            </div>
+        </div>
+    </div>
+</body>
+</html>

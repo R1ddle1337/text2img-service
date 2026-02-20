@@ -31,6 +31,25 @@ function getDateStr() {
     return `${year}年${month}月${day}日`;
 }
 
+function sanitizeText(input, maxLen = 140) {
+    const text = String(input ?? '').replace(/\u0000/g, '').trim();
+    if (!text) return '';
+    return text.length > maxLen ? `${text.slice(0, maxLen - 3)}...` : text;
+}
+
+function normalizeQfarmRows(rows) {
+    if (!Array.isArray(rows)) return [];
+    return rows.slice(0, 80).map((row) => {
+        if (row && typeof row === 'object') {
+            const label = sanitizeText(row.label, 40);
+            const value = sanitizeText(row.value, 220);
+            if (label) return { label, value };
+            return { value };
+        }
+        return { value: sanitizeText(row, 220) };
+    }).filter((row) => row.value || row.label);
+}
+
 // 健康检查
 app.get('/health', (req, res) => {
     res.json({ status: 'ok', timestamp: new Date().toISOString() });
@@ -278,6 +297,70 @@ app.post('/api/universal', async (req, res) => {
 });
 
 /**
+ * qfarm 结构化渲染
+ * POST /api/qfarm
+ * Body: {
+ *   title, subtitle, icon, theme, summary,
+ *   stats: [{ label, value }],
+ *   sections: [{ title, rows: [{ label?, value }] }],
+ *   page: { index, total }, footer
+ * }
+ */
+app.post('/api/qfarm', async (req, res) => {
+    try {
+        const body = (req.body && typeof req.body === 'object') ? req.body : {};
+
+        const themeInput = sanitizeText(body.theme || 'light', 16).toLowerCase();
+        if (!['light', 'dark'].includes(themeInput)) {
+            return res.status(400).json({ error: 'theme 仅支持 light|dark' });
+        }
+
+        const stats = Array.isArray(body.stats)
+            ? body.stats
+                .slice(0, 10)
+                .map((item) => ({
+                    label: sanitizeText(item && item.label, 30),
+                    value: sanitizeText(item && item.value, 80),
+                }))
+                .filter((item) => item.label || item.value)
+            : [];
+
+        const sections = Array.isArray(body.sections)
+            ? body.sections
+                .slice(0, 8)
+                .map((section) => ({
+                    title: sanitizeText(section && section.title, 24),
+                    rows: normalizeQfarmRows(section && section.rows),
+                }))
+                .filter((section) => Array.isArray(section.rows) && section.rows.length > 0)
+            : [];
+
+        const pageRaw = (body.page && typeof body.page === 'object') ? body.page : {};
+        const pageIndex = Math.max(1, parseInt(pageRaw.index, 10) || 1);
+        const pageTotal = Math.max(pageIndex, parseInt(pageRaw.total, 10) || pageIndex);
+
+        const data = {
+            title: sanitizeText(body.title, 30) || 'QFarm 结果',
+            subtitle: sanitizeText(body.subtitle, 60) || getDateStr(),
+            icon: sanitizeText(body.icon, 8) || '🌾',
+            theme: themeInput,
+            summary: sanitizeText(body.summary, 220),
+            stats,
+            sections,
+            page: { index: pageIndex, total: pageTotal },
+            footer: sanitizeText(body.footer, 80) || 'astrbot_plugin_qfarm',
+        };
+
+        const imageBuffer = await renderService.render('qfarm', data, { width: 920 });
+        res.set('Content-Type', 'image/png');
+        res.send(imageBuffer);
+    } catch (error) {
+        console.error('QFarm render error:', error);
+        res.status(500).json({ error: error.message });
+    }
+});
+
+/**
  * 井字棋游戏渲染
  * POST /api/tictactoe
  * Body: {
@@ -444,6 +527,321 @@ app.post('/api/gomoku', async (req, res) => {
         res.send(imageBuffer);
     } catch (error) {
         console.error('Gomoku render error:', error);
+        res.status(500).json({ error: error.message });
+    }
+});
+
+/**
+ * 四子棋游戏渲染
+ * POST /api/connect4
+ */
+app.post('/api/connect4', async (req, res) => {
+    try {
+        const {
+            board,
+            columns,
+            rows,
+            player_red_name,
+            player_yellow_name,
+            current_turn,
+            move_count,
+            last_move,
+            is_finished,
+            winner,
+            subtitle
+        } = req.body;
+
+        const cols = columns || 7;
+        const rws = rows || 6;
+
+        const data = {
+            board: board || Array(cols * rws).fill(''),
+            columns: cols,
+            rows: rws,
+            player_red_name: player_red_name || '红方',
+            player_yellow_name: player_yellow_name || '',
+            current_turn: current_turn || 'R',
+            move_count: move_count || 0,
+            last_move: last_move !== undefined ? last_move : null,
+            is_finished: is_finished || false,
+            winner: winner || null,
+            subtitle: subtitle || ''
+        };
+
+        const width = Math.max(420, cols * 64 + 80);
+        const imageBuffer = await renderService.render('connect4', data, { width });
+        res.set('Content-Type', 'image/png');
+        res.send(imageBuffer);
+    } catch (error) {
+        console.error('Connect4 render error:', error);
+        res.status(500).json({ error: error.message });
+    }
+});
+
+/**
+ * 扫雷游戏渲染
+ * POST /api/minesweeper
+ */
+app.post('/api/minesweeper', async (req, res) => {
+    try {
+        const {
+            cells,
+            width,
+            height,
+            mine_count,
+            player_name,
+            move_count,
+            flags_used,
+            is_finished,
+            is_win,
+            subtitle
+        } = req.body;
+
+        const w = width || 9;
+        const h = height || 9;
+
+        const data = {
+            cells: cells || Array(w * h).fill('hidden'),
+            width: w,
+            height: h,
+            mine_count: mine_count || 10,
+            player_name: player_name || '玩家',
+            move_count: move_count || 0,
+            flags_used: flags_used || 0,
+            is_finished: is_finished || false,
+            is_win: is_win || false,
+            subtitle: subtitle || ''
+        };
+
+        const longSide = Math.max(w, h);
+        const cellSize = longSide <= 9 ? 34 : (longSide <= 12 ? 30 : 26);
+        const gridWidth = w * cellSize + (w - 1) * 6;
+        const rowLabelW = longSide <= 9 ? 18 : 20;
+        const sideBlockW = rowLabelW * 2 + 6 * 2;
+        const renderWidth = Math.max(460, gridWidth + sideBlockW + 120);
+
+        const imageBuffer = await renderService.render('minesweeper', data, { width: renderWidth });
+        res.set('Content-Type', 'image/png');
+        res.send(imageBuffer);
+    } catch (error) {
+        console.error('Minesweeper render error:', error);
+        res.status(500).json({ error: error.message });
+    }
+});
+
+/**
+ * 2048 游戏渲染
+ * POST /api/game2048
+ */
+app.post('/api/game2048', async (req, res) => {
+    try {
+        const {
+            board,
+            size,
+            player_name,
+            score,
+            best_tile,
+            move_count,
+            is_finished,
+            is_win,
+            subtitle,
+            last_spawn_pos
+        } = req.body;
+
+        const n = size || 4;
+
+        const data = {
+            board: board || Array(n * n).fill(0),
+            size: n,
+            player_name: player_name || '玩家',
+            score: score || 0,
+            best_tile: best_tile || 0,
+            move_count: move_count || 0,
+            is_finished: is_finished || false,
+            is_win: is_win || false,
+            subtitle: subtitle || '',
+            last_spawn_pos: last_spawn_pos !== undefined ? last_spawn_pos : null
+        };
+
+        const tileSize = n <= 4 ? 84 : (n <= 5 ? 68 : 56);
+        const renderWidth = Math.max(460, n * tileSize + (n - 1) * 10 + 120);
+
+        const imageBuffer = await renderService.render('game2048', data, { width: renderWidth });
+        res.set('Content-Type', 'image/png');
+        res.send(imageBuffer);
+    } catch (error) {
+        console.error('2048 render error:', error);
+        res.status(500).json({ error: error.message });
+    }
+});
+
+/**
+ * 德州扑克渲染
+ * POST /api/texas
+ */
+app.post('/api/texas', async (req, res) => {
+    try {
+        const {
+            phase_text,
+            pot,
+            current_bet,
+            community_cards,
+            players,
+            is_finished,
+            winner_names,
+            last_action,
+            subtitle
+        } = req.body;
+
+        const list = Array.isArray(players) ? players : [];
+
+        const data = {
+            phase_text: phase_text || '等待玩家',
+            pot: pot || 0,
+            current_bet: current_bet || 0,
+            community_cards: community_cards || [],
+            players: list,
+            is_finished: is_finished || false,
+            winner_names: winner_names || [],
+            last_action: last_action || '',
+            subtitle: subtitle || ''
+        };
+
+        // 双列玩家卡片，宽度按玩家数量轻微放大
+        const width = list.length > 4 ? 920 : 860;
+        const imageBuffer = await renderService.render('texas', data, { width });
+        res.set('Content-Type', 'image/png');
+        res.send(imageBuffer);
+    } catch (error) {
+        console.error('Texas render error:', error);
+        res.status(500).json({ error: error.message });
+    }
+});
+
+/**
+ * 21点渲染
+ * POST /api/blackjack
+ */
+app.post('/api/blackjack', async (req, res) => {
+    try {
+        const {
+            phase_text,
+            dealer_cards,
+            dealer_value_text,
+            players,
+            is_finished,
+            winner_names,
+            last_action,
+            subtitle
+        } = req.body;
+
+        const list = Array.isArray(players) ? players : [];
+
+        const data = {
+            phase_text: phase_text || '等待发牌',
+            dealer_cards: dealer_cards || [],
+            dealer_value_text: dealer_value_text || '0',
+            players: list,
+            is_finished: is_finished || false,
+            winner_names: winner_names || [],
+            last_action: last_action || '',
+            subtitle: subtitle || ''
+        };
+
+        const width = list.length > 3 ? 920 : 860;
+        const imageBuffer = await renderService.render('blackjack', data, { width });
+        res.set('Content-Type', 'image/png');
+        res.send(imageBuffer);
+    } catch (error) {
+        console.error('Blackjack render error:', error);
+        res.status(500).json({ error: error.message });
+    }
+});
+
+/**
+ * UNO渲染
+ * POST /api/uno
+ */
+app.post('/api/uno', async (req, res) => {
+    try {
+        const {
+            phase_text,
+            top_card,
+            current_color,
+            direction,
+            pending_draw,
+            players,
+            is_finished,
+            winner_name,
+            last_action,
+            subtitle
+        } = req.body;
+
+        const list = Array.isArray(players) ? players : [];
+
+        const data = {
+            phase_text: phase_text || '等待发牌',
+            top_card: top_card || '',
+            current_color: current_color || 'R',
+            direction: direction || 1,
+            pending_draw: pending_draw || 0,
+            players: list,
+            is_finished: is_finished || false,
+            winner_name: winner_name || '',
+            last_action: last_action || '',
+            subtitle: subtitle || ''
+        };
+
+        const width = list.length > 4 ? 980 : 900;
+        const imageBuffer = await renderService.render('uno', data, { width });
+        res.set('Content-Type', 'image/png');
+        res.send(imageBuffer);
+    } catch (error) {
+        console.error('UNO render error:', error);
+        res.status(500).json({ error: error.message });
+    }
+});
+
+/**
+ * 斗地主渲染
+ * POST /api/doudizhu
+ */
+app.post('/api/doudizhu', async (req, res) => {
+    try {
+        const {
+            phase_text,
+            landlord_name,
+            bottom_cards,
+            players,
+            last_play_text,
+            current_turn_name,
+            winner_text,
+            is_finished,
+            last_action,
+            subtitle
+        } = req.body;
+
+        const list = Array.isArray(players) ? players : [];
+
+        const data = {
+            phase_text: phase_text || '等待发牌',
+            landlord_name: landlord_name || '',
+            bottom_cards: bottom_cards || [],
+            players: list,
+            last_play_text: last_play_text || '无',
+            current_turn_name: current_turn_name || '',
+            winner_text: winner_text || '',
+            is_finished: is_finished || false,
+            last_action: last_action || '',
+            subtitle: subtitle || ''
+        };
+
+        const width = 920;
+        const imageBuffer = await renderService.render('doudizhu', data, { width });
+        res.set('Content-Type', 'image/png');
+        res.send(imageBuffer);
+    } catch (error) {
+        console.error('DouDizhu render error:', error);
         res.status(500).json({ error: error.message });
     }
 });

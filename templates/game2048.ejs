@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@400;500;700;900&display=swap');
+        body {
+            margin: 0;
+            padding: 0;
+            font-family: 'Noto Sans SC', 'Microsoft YaHei', sans-serif;
+            display: inline-block;
+            background: radial-gradient(circle at 20% 0%, #111827 0%, #0b1022 55%, #030712 100%);
+        }
+        .tile {
+            width: var(--tile-size);
+            height: var(--tile-size);
+            border-radius: 14px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 900;
+            letter-spacing: 0.02em;
+            box-shadow: inset 0 1px 0 rgba(255,255,255,0.2), 0 10px 18px rgba(0,0,0,0.22);
+        }
+        .spawn-ring {
+            position: absolute;
+            inset: -3px;
+            border-radius: 16px;
+            border: 3px solid rgba(14,165,233,0.45);
+            box-shadow: 0 0 18px rgba(14,165,233,0.3);
+            pointer-events: none;
+        }
+        .v0    { background: rgba(255,255,255,0.08); color: transparent; }
+        .v2    { background: #eee4da; color: #776e65; }
+        .v4    { background: #ede0c8; color: #776e65; }
+        .v8    { background: #f2b179; color: #f9f6f2; }
+        .v16   { background: #f59563; color: #f9f6f2; }
+        .v32   { background: #f67c5f; color: #f9f6f2; }
+        .v64   { background: #f65e3b; color: #f9f6f2; }
+        .v128  { background: #edcf72; color: #f9f6f2; font-size: calc(var(--tile-size) * 0.32); }
+        .v256  { background: #edcc61; color: #f9f6f2; font-size: calc(var(--tile-size) * 0.32); }
+        .v512  { background: #edc850; color: #f9f6f2; font-size: calc(var(--tile-size) * 0.32); }
+        .v1024 { background: #edc53f; color: #f9f6f2; font-size: calc(var(--tile-size) * 0.28); }
+        .v2048 { background: #edc22e; color: #f9f6f2; font-size: calc(var(--tile-size) * 0.28); }
+        .v4096 { background: #a855f7; color: #f9f6f2; font-size: calc(var(--tile-size) * 0.24); }
+        .v8192 { background: #2563eb; color: #f9f6f2; font-size: calc(var(--tile-size) * 0.24); }
+    </style>
+</head>
+<body>
+    <%
+    const n = size || 4;
+    const arr = Array.isArray(board) ? board : Array(n * n).fill(0);
+    const tileSize = n <= 4 ? 84 : (n <= 5 ? 68 : 56);
+    const gap = n <= 4 ? 12 : 10;
+    const gridW = n * tileSize + (n - 1) * gap;
+    const outerW = gridW + 80;
+    const spawn = (last_spawn_pos !== undefined && last_spawn_pos !== null) ? last_spawn_pos : null;
+    %>
+
+    <div style="width: <%= outerW %>px;">
+        <div class="rounded-t-2xl overflow-hidden">
+            <div class="px-6 py-5 text-white" style="background: linear-gradient(90deg, #0ea5e9 0%, #2563eb 48%, #7c3aed 100%);">
+                <div class="flex items-center justify-between">
+                    <div class="flex items-center gap-3">
+                        <div class="text-3xl">🧩</div>
+                        <div>
+                            <div class="text-2xl font-bold">2048</div>
+                            <div class="text-white/80 text-sm"><%= subtitle || '' %></div>
+                        </div>
+                    </div>
+                    <div class="text-right">
+                        <% if (is_finished) { %>
+                            <div class="text-sm font-semibold bg-white/20 px-3 py-1 rounded-full inline-block">
+                                <%= is_win ? '胜利' : '结束' %>
+                            </div>
+                        <% } else { %>
+                            <div class="text-sm font-semibold bg-white/20 px-3 py-1 rounded-full inline-block">进行中</div>
+                        <% } %>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="px-6 py-5 bg-white rounded-b-2xl shadow-2xl">
+            <div class="flex justify-between mb-4 gap-2">
+                <div class="flex-1 bg-slate-100 rounded-xl px-3 py-2">
+                    <div class="text-xs text-slate-500">玩家</div>
+                    <div class="text-sm font-semibold text-slate-800 truncate"><%= player_name || '玩家' %></div>
+                </div>
+                <div class="flex-1 bg-slate-100 rounded-xl px-3 py-2 text-center">
+                    <div class="text-xs text-slate-500">分数</div>
+                    <div class="text-lg font-black text-slate-800"><%= score || 0 %></div>
+                </div>
+                <div class="flex-1 bg-slate-100 rounded-xl px-3 py-2 text-right">
+                    <div class="text-xs text-slate-500">最高</div>
+                    <div class="text-lg font-black text-slate-800"><%= best_tile || 0 %></div>
+                </div>
+            </div>
+
+            <div class="mx-auto rounded-2xl p-4" style="width: <%= gridW + 32 %>px; background: linear-gradient(145deg, #334155, #1e293b);">
+                <div style="display: grid; grid-template-columns: repeat(<%= n %>, <%= tileSize %>px); gap: <%= gap %>px; --tile-size: <%= tileSize %>px;">
+                    <% for (let y = 0; y < n; y++) { %>
+                        <% for (let x = 0; x < n; x++) { %>
+                            <%
+                            const idx = y * n + x;
+                            const value = arr[idx] || 0;
+                            const cls = value > 8192 ? 'v8192' : `v${value}`;
+                            const isSpawn = idx === spawn;
+                            %>
+                            <div class="tile <%= cls %>" style="position: relative;">
+                                <% if (value > 0) { %><%= value %><% } %>
+                                <% if (isSpawn && value > 0) { %><div class="spawn-ring"></div><% } %>
+                            </div>
+                        <% } %>
+                    <% } %>
+                </div>
+            </div>
+
+            <div class="mt-4 flex justify-between text-xs text-slate-500">
+                <div>步数: <%= move_count || 0 %></div>
+                <div>尺寸: <%= n %>x<%= n %></div>
+                <div>目标: <%= n <= 4 ? 2048 : 4096 %></div>
+            </div>
+
+            <div class="mt-3 text-center text-xs text-slate-400">
+                指令: /2048 · /推 上|下|左|右
+            </div>
+        </div>
+    </div>
+</body>
+</html>
+

@@ -89,6 +89,14 @@ Content-Type: application/json
 | `POST /api/gold` | 黄金价格 | `{ date, metals, stores, recycle }` |
 | `POST /api/luck` | 运势 | `{ luck_desc, luck_rank, luck_tip }` |
 | `POST /api/universal` | 通用内容 | `{ title, content, icon? }` |
+| `POST /api/qfarm` | qfarm 结构化渲染 | `{ title, subtitle, icon, theme, summary, stats[], sections[], page, footer }` |
+| `POST /api/connect4` | 四子棋渲染 | `{ board, columns, rows, player_red_name, player_yellow_name, current_turn, move_count, last_move, winner, is_finished, subtitle? }` |
+| `POST /api/minesweeper` | 扫雷渲染 | `{ cells, width, height, mine_count, player_name, move_count, flags_used, is_finished, is_win, subtitle? }` |
+| `POST /api/game2048` | 2048 渲染 | `{ board, size, player_name, score, best_tile, move_count, is_finished, is_win, subtitle?, last_spawn_pos? }` |
+| `POST /api/texas` | 德州扑克渲染 | `{ phase_text, pot, current_bet, community_cards, players, is_finished, winner_names, last_action, subtitle? }` |
+| `POST /api/blackjack` | 21点渲染 | `{ phase_text, dealer_cards, dealer_value_text, players, is_finished, winner_names, last_action, subtitle? }` |
+| `POST /api/uno` | UNO渲染 | `{ phase_text, top_card, current_color, direction, pending_draw, players, is_finished, winner_name, last_action, subtitle? }` |
+| `POST /api/doudizhu` | 斗地主渲染 | `{ phase_text, landlord_name, bottom_cards, players, last_play_text, current_turn_name, winner_text, is_finished, last_action, subtitle? }` |
 
 ### 请求示例
 
@@ -97,6 +105,26 @@ curl -X POST http://localhost:51234/api/universal \
   -H "Content-Type: application/json" \
   -d '{"title":"AI 资讯","content":"1. 标题一\n2. 标题二"}' \
   --output ai_news.png
+```
+
+```bash
+curl -X POST http://localhost:51234/api/qfarm \
+  -H "Content-Type: application/json" \
+  -d '{
+    "title": "农场状态",
+    "subtitle": "2026-02-20 20:30:00",
+    "theme": "dark",
+    "summary": "连接在线，账号运行中",
+    "stats": [
+      {"label": "金币", "value": "12345"},
+      {"label": "经验", "value": "6789"}
+    ],
+    "sections": [
+      {"title": "详情", "rows": [{"label": "下次巡田", "value": "12s"}]}
+    ],
+    "page": {"index": 1, "total": 1}
+  }' \
+  --output qfarm_status.png
 ```
 
 ```bash
@@ -160,6 +188,7 @@ git push origin v1.0.0
 ## 模板说明
 
 默认模板：`templates/universal.ejs`  
+qfarm 专用模板：`templates/qfarm.ejs`  
 如需覆盖模板，使用 volume 映射：`./templates:/app/templates`
 
 ## 本地开发

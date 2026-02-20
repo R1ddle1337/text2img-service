@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@400;500;700;800&display=swap');
+        body {
+            margin: 0;
+            padding: 0;
+            font-family: 'Noto Sans SC', 'Microsoft YaHei', sans-serif;
+            display: inline-block;
+            background: radial-gradient(circle at 20% 0%, #111827 0%, #020617 62%, #01030a 100%);
+        }
+        .table {
+            background:
+                radial-gradient(circle at 20% 20%, rgba(255,255,255,0.07), transparent 34%),
+                radial-gradient(circle at 80% 70%, rgba(255,255,255,0.06), transparent 28%),
+                linear-gradient(145deg, #0f172a 0%, #0b1020 60%, #0a0f1a 100%);
+            border: 2px solid rgba(148,163,184,0.24);
+            box-shadow: inset 0 2px 10px rgba(0,0,0,0.28), 0 18px 36px rgba(0,0,0,0.36);
+        }
+        .card-big {
+            width: 86px;
+            height: 120px;
+            border-radius: 14px;
+            color: #fff;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-direction: column;
+            font-weight: 800;
+            box-shadow: 0 14px 24px rgba(0,0,0,0.35);
+            border: 1px solid rgba(255,255,255,0.2);
+        }
+        .uno-chip {
+            border-radius: 10px;
+            padding: 3px 8px;
+            color: #fff;
+            font-size: 12px;
+            font-weight: 700;
+            border: 1px solid rgba(255,255,255,0.22);
+        }
+    </style>
+</head>
+<body>
+    <%
+    const ps = Array.isArray(players) ? players : [];
+    const colorMap = {
+        R: { bg: '#dc2626', name: '红' },
+        G: { bg: '#16a34a', name: '绿' },
+        B: { bg: '#2563eb', name: '蓝' },
+        Y: { bg: '#ca8a04', name: '黄' }
+    };
+    const curColor = colorMap[current_color] || colorMap.R;
+    function valueOf(card) {
+        if (!card) return '?';
+        if (card === 'W') return 'W';
+        if (card === 'W+4') return '+4';
+        if (card.length >= 2 && card.slice(1) === '+2') return '+2';
+        const v = card.slice(1);
+        if (v === 'S') return '跳';
+        if (v === 'R') return '反';
+        return v || '?';
+    }
+    function chipStyle(card) {
+        if (!card) return 'background:#64748b;';
+        if (card.startsWith('W')) return 'background:linear-gradient(135deg,#ef4444 0%,#f59e0b 35%,#22c55e 70%,#3b82f6 100%);';
+        const c = colorMap[card[0]];
+        return `background:${(c && c.bg) || '#64748b'};`;
+    }
+    const dirText = direction === -1 ? '逆时针' : '顺时针';
+    const width = ps.length > 4 ? 980 : 900;
+    %>
+
+    <div style="width: <%= width %>px;">
+        <div class="rounded-t-2xl overflow-hidden">
+            <div class="px-7 py-5 text-white" style="background: linear-gradient(90deg, #ef4444 0%, #f59e0b 30%, #22c55e 65%, #3b82f6 100%);">
+                <div class="flex items-center justify-between">
+                    <div class="flex items-center gap-3">
+                        <div class="text-3xl">🟩</div>
+                        <div>
+                            <div class="text-2xl font-bold">UNO</div>
+                            <div class="text-white/85 text-sm"><%= subtitle || '' %></div>
+                        </div>
+                    </div>
+                    <div class="text-right text-sm">
+                        <div class="bg-white/20 rounded-full px-3 py-1 font-semibold inline-block"><%= phase_text || '进行中' %></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="bg-white px-6 py-5 rounded-b-2xl shadow-2xl">
+            <div class="table rounded-2xl p-5 text-white">
+                <div class="flex justify-between items-center mb-4">
+                    <div class="text-sm bg-white/10 rounded-xl px-3 py-2">方向: <span class="font-bold"><%= dirText %></span></div>
+                    <div class="text-sm bg-white/10 rounded-xl px-3 py-2">
+                        当前颜色:
+                        <span class="font-bold px-2 py-0.5 rounded ml-1" style="background:<%= curColor.bg %>"><%= curColor.name %></span>
+                    </div>
+                    <div class="text-sm bg-white/10 rounded-xl px-3 py-2">待摸牌: <span class="font-bold"><%= pending_draw || 0 %></span></div>
+                </div>
+
+                <div class="flex items-center gap-4 mb-5">
+                    <div class="text-xs text-white/70">顶牌</div>
+                    <div class="card-big" style="<%= chipStyle(top_card) %>">
+                        <div class="text-xs mb-1 opacity-90"><%= top_card || '--' %></div>
+                        <div class="text-3xl"><%= valueOf(top_card) %></div>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-2 gap-3">
+                    <% ps.forEach(function(p) { %>
+                        <div class="rounded-xl px-3 py-3 <%= p.is_turn ? 'ring-2 ring-yellow-300 bg-white/15' : 'bg-white/10' %>">
+                            <div class="flex justify-between items-start mb-2">
+                                <div class="text-sm font-semibold"><%= p.name %></div>
+                                <div class="text-xs text-white/80">手牌: <%= p.count %></div>
+                            </div>
+                            <div class="flex flex-wrap gap-1.5">
+                                <% (p.cards || []).forEach(function(c, i) { %>
+                                    <span class="uno-chip" style="<%= chipStyle(c) %>"><%= i + 1 %>.<%= valueOf(c) %></span>
+                                <% }); %>
+                            </div>
+                        </div>
+                    <% }); %>
+                </div>
+            </div>
+
+            <div class="mt-4 flex justify-between text-xs text-slate-500">
+                <div class="truncate pr-3">最近动作: <%= last_action || '无' %></div>
+                <% if (is_finished) { %>
+                    <div class="font-semibold text-emerald-700">赢家: <%= winner_name || '无' %></div>
+                <% } else { %>
+                    <div>指令: /UNO出 序号 [颜色] · /UNO摸 · /UNO过</div>
+                <% } %>
+            </div>
+        </div>
+    </div>
+</body>
+</html>
